@@ -1,7 +1,7 @@
 We need to split this work up into a few tasks.
 
-1. We need to scrape the content of the webpage and store it somewhere for easy access. 
-2. We could do the scraping in real time but realistically it would be helpful to scrape it once and store it somewhere until it changes
+1. We need to scrape the content of the webpage and store it somewhere for easy access. - CHECK
+2. We could do the scraping in real time but realistically it would be helpful to scrape it once and store it somewhere until it changes - CHECK
 3. Two things can be done:
 Large in-context paragraph of scraped data passed into a system prompt for the chatbot
 Use RAG to get related data and then formulate a response based on that. 
