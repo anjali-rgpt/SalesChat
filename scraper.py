@@ -59,9 +59,10 @@ def scrape_dynamic_content(URL):
             paragraph = Document(page_content = new_content)
             content_store.append(paragraph)
             """NOTE: There is an issue here where buttons 4 and 5 are being clicked but for some reason the text does not get updated"""
-            print(header, "\n", content)
+            # print(header, "\n", content)
             # init_text = header
         except Exception as e:
             print(e)
             break
+    
     return content_store

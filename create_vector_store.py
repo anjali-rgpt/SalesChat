@@ -23,15 +23,18 @@ def create_index(url = URL):
 
     loader = apify.call_actor(
         actor_id = "apify/website-content-crawler",
-        run_input={"startUrls": [{"url": "https://www.artisan.co"}], "maxCrawlPages": 10, "crawlerType": "cheerio"},
+        run_input={"startUrls": [{"url": "https://www.artisan.co"}], "maxCrawlPages": 20, "crawlerType": "cheerio"},
         dataset_mapping_function=lambda item: Document(
             page_content=item["text"] or "", metadata={"source": item["url"]}
         ),
     )
 
     home_page_dynamic = scrape_dynamic_content(URL)
+    
 
-    documents_all = loader.load() + home_page_dynamic
+    documents_all = loader.load()
+    documents_all.extend(home_page_dynamic)
+    
 
     text_splitter = RecursiveCharacterTextSplitter()
     documents = text_splitter.split_documents(documents_all)
