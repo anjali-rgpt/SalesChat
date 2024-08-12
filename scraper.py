@@ -13,7 +13,7 @@ import time
 
 def scrape_dynamic_content(URL):
 
-    """Scrapes dynamic data from home webpage and returns it"""
+    """Scrapes dynamic data from home webpage and returns it - custom to Artisan"""
 
     chrome_options = Options()
     chrome_options.add_argument("--headless")
