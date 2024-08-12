@@ -8,6 +8,14 @@ from langchain_openai.embeddings import OpenAIEmbeddings
 from langchain.memory import ConversationBufferWindowMemory
 from langchain.chains import ConversationalRetrievalChain
 from langchain_core.runnables import RunnableLambda
+from langchain.chains import create_history_aware_retriever, create_retrieval_chain
+from langchain.chains.combine_documents import create_stuff_documents_chain
+from langserve import CustomUserType
+from langchain_community.chat_message_histories import ChatMessageHistory
+from langchain_core.chat_history import BaseChatMessageHistory
+from langchain_core.runnables.history import RunnableWithMessageHistory
+from typing import Any
+from langchain.pydantic_v1 import BaseModel, Field
 
 
 os.environ["OPENAI_API_KEY"] = config.open_ai_key
@@ -21,25 +29,61 @@ vectorstore = FAISS.load_local("vector_store", embeddings, allow_dangerous_deser
 retriever = vectorstore.as_retriever()
 
 SYSTEM_PROMPT = "You are a friendly, helpful AI representative of Artisan AI. \n \
-    You will answer the sentences using the provided context.  You will answer in at most five sentences. If the response is long or the information is complex, you will answer in points. \
-        You will not hallucinate. If the user makes small talk, be friendly!"
+    You will answer the sentences using the provided context {context}.  You will answer in at most five sentences. If the response is long or the information is complex, you will answer in points. \
+    You will not hallucinate. If the user makes small talk, be friendly!"
 
-memory = ConversationBufferWindowMemory(k=10, memory_key = "chat_history", output_key = "answer", input_key = "question", return_messages=True)
+CONTEXT_PROMPT = "Given chat history and latest user prompt, check if the user prompt references anything in chat history. If yes, forumlate a standalone question which can be understood without the chat history: combine information from chat history and reference what the user mentioned before. If no, use the same user prompt. If unsure, ask the user to repeat their question. Do not answer the user prompt."
 
-chain = ConversationalRetrievalChain.from_llm(
-    llm=model,
-    memory=memory,
-    chain_type="stuff",
-    retriever=retriever,
-    return_source_documents=False,
-    get_chat_history=lambda h : h,
-    verbose=False)
+contextualized_prompt = ChatPromptTemplate.from_messages(
+    [
+        ("system", CONTEXT_PROMPT),
+        MessagesPlaceholder("chat_history"),
+        ("human", "{input}"),
+    ]
+)
 
+history_aware_retriever = create_history_aware_retriever(
+    model, retriever, contextualized_prompt
+)
+
+user_prompt = ChatPromptTemplate.from_messages(
+    [
+        ("system", SYSTEM_PROMPT),
+        MessagesPlaceholder("chat_history"),
+        ("human", "{input}"),
+    ]
+)
+
+question_answer_chain = create_stuff_documents_chain(model, user_prompt)
+
+rag_chain = create_retrieval_chain(history_aware_retriever, question_answer_chain)
+
+store = {}
+
+
+def get_session_history(session_id: str) -> BaseChatMessageHistory:
+    if session_id not in store:
+        store[session_id] = ChatMessageHistory()
+    return store[session_id]
+
+class Input(BaseModel):
+    input: str
+
+class Output(BaseModel):
+    answer: Any
+
+conversational_rag_chain = RunnableWithMessageHistory(
+    rag_chain,
+    get_session_history,
+    input_messages_key="input",
+    history_messages_key="chat_history",
+    output_messages_key="answer",
+).with_types(input_type=Input, output_type=Output)
 
 app = FastAPI()
 
 
-add_routes(app, chain | RunnableLambda(lambda x: x["answer"]) , path="/chat", playground_type="default")
+add_routes(app, conversational_rag_chain | RunnableLambda(lambda x: x["answer"]) , path="/chat", playground_type="default")
 
 if __name__ == "__main__":
     import uvicorn
