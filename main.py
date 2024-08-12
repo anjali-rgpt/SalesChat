@@ -1,4 +1,5 @@
-import os, config
+import os
+# import config
 from fastapi import FastAPI
 from langserve.server import add_routes
 from langchain.chat_models import ChatOpenAI
@@ -16,7 +17,7 @@ from typing import Any
 from langchain.pydantic_v1 import BaseModel
 
 
-os.environ["OPENAI_API_KEY"] = config.open_ai_key
+# os.environ["OPENAI_API_KEY"] = config.open_ai_key
 
 # Define model
 model = ChatOpenAI(model="gpt-4o-mini", temperature = 0.2)

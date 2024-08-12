@@ -1,7 +1,7 @@
 # Langchain Web Scraping Q & A tutorial over specific website
 
 import os
-import config
+# import config
 
 from langchain.indexes import VectorstoreIndexCreator
 from langchain_community.vectorstores import FAISS
@@ -13,8 +13,8 @@ from langchain_openai.embeddings import OpenAIEmbeddings
 
 from scraper import scrape_dynamic_content
 
-os.environ["OPENAI_API_KEY"] = config.open_ai_key
-os.environ["APIFY_API_TOKEN"] = config.apify_token
+# os.environ["OPENAI_API_KEY"] = config.open_ai_key
+# os.environ["APIFY_API_TOKEN"] = config.apify_token
 
 URL = "https://www.artisan.co"
 
