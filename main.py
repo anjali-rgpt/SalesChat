@@ -91,7 +91,7 @@ conversational_rag_chain = RunnableWithMessageHistory(
 ).with_types(input_type=Input, output_type=Output)
 
 # Deploy application using FastAPI and extract the answer parameter to print out
-app = FastAPI()
+app = FastAPI(root_path = "/chat/playground/")
 
 # Add route /chat
 add_routes(app, conversational_rag_chain | RunnableLambda(lambda x: x["answer"]) , path="/chat", playground_type="default")
