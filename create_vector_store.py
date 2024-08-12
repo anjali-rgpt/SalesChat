@@ -23,7 +23,7 @@ def create_index(url = URL):
 
     loader = apify.call_actor(
         actor_id = "apify/website-content-crawler",
-        run_input={"startUrls": [{"url": "https://www.artisan.co"}], "maxCrawlPages": 20, "crawlerType": "cheerio"},
+        run_input={"startUrls": [{"url": "https://www.artisan.co"}], "maxCrawlPages": 20,  "crawlerType": "cheerio"},
         dataset_mapping_function=lambda item: Document(
             page_content=item["text"] or "", metadata={"source": item["url"]}
         ),

@@ -1,61 +1,46 @@
-import os
-import config
+import os, config
+from fastapi import FastAPI
+from langserve.server import add_routes
+from langchain.chat_models import ChatOpenAI
+from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_community.vectorstores import FAISS
 from langchain_openai.embeddings import OpenAIEmbeddings
-from create_vector_store import create_index
-from langchain_openai import ChatOpenAI
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables import RunnablePassthrough
-from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain.memory import ConversationBufferWindowMemory
+from langchain.chains import ConversationalRetrievalChain
+from langchain_core.runnables import RunnableLambda
 
-embeddings = OpenAIEmbeddings(model = "text-embedding-3-small")
+
 os.environ["OPENAI_API_KEY"] = config.open_ai_key
 
-def format_docs(docs):
-    return "\n\n".join(doc.page_content for doc in docs)
-try:
-    vectorstore = ""
-    retriever = ""
-    try:
-        vectorstore = FAISS.load_local("vector_store", embeddings, allow_dangerous_deserialization = True)
-        retriever = vectorstore.as_retriever(search_type="similarity_score_threshold", search_kwargs={"score_threshold": 0.3})
-    except Exception as e:
-        print(e)
-        print("Index not found")
-        create_index()
-        print("Index created with data")
-        vectorstore = FAISS.load_local("vector_store", embeddings, allow_dangerous_deserialization = True)
-        retriever = vectorstore.as_retriever(search_type="similarity_score_threshold", search_kwargs={"score_threshold": 0.3})
-    
+model = ChatOpenAI(model="gpt-4o-mini", temperature = 0.2)
 
-    llm = ChatOpenAI(model = 'gpt-4o-mini')
+embeddings = OpenAIEmbeddings(model = "text-embedding-3-small")
 
-    prompt = ChatPromptTemplate.from_messages([
-    ("system", "You are a helpful representative providing information on behalf of Artisan AI. Use the following pieces of retrieved context to answer the question. Do not answer unrelated questions and try to find the most related answer. Answer in at most five sentences."),
-    ("user", "Question: {question}, \nContext: {context} \n")   
-])
-    
-    output_parser = StrOutputParser()
+vectorstore = FAISS.load_local("vector_store", embeddings, allow_dangerous_deserialization = True)
 
-    rag_chain = (
-    {"context": retriever | format_docs, "question": RunnablePassthrough()}
-    | prompt
-    | llm
-    | StrOutputParser()
-)   
-    
-    print(rag_chain.invoke("What services do you offer?"))
+retriever = vectorstore.as_retriever()
 
-except Exception as m:
-    print(m)
-    
+SYSTEM_PROMPT = "You are a friendly, helpful AI representative of Artisan AI. \n \
+    You will answer the sentences using the provided context.  You will answer in at most five sentences. If the response is long or the information is complex, you will answer in points. \
+        You will not hallucinate. If the user makes small talk, be friendly!"
+
+memory = ConversationBufferWindowMemory(k=10, memory_key = "chat_history", output_key = "answer", input_key = "question", return_messages=True)
+
+chain = ConversationalRetrievalChain.from_llm(
+    llm=model,
+    memory=memory,
+    chain_type="stuff",
+    retriever=retriever,
+    return_source_documents=False,
+    get_chat_history=lambda h : h,
+    verbose=False)
 
 
+app = FastAPI()
 
 
+add_routes(app, chain | RunnableLambda(lambda x: x["answer"]) , path="/chat", playground_type="default")
 
-
-
-
-
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
