@@ -33,7 +33,7 @@ retriever = vectorstore.as_retriever()
 
 SYSTEM_PROMPT = "You are a friendly, helpful AI representative of Artisan AI. \n \
     You will answer the sentences using the provided context {context}.  You will answer in at most five sentences. If the response is long or the information is complex, you will answer in points. \
-    You will not hallucinate. If the user makes small talk, be friendly!"
+    You will not hallucinate. If the user makes small talk, be friendly! Do not answer from privacy policy documents unless the user specifically asks about it."
 
 CONTEXT_PROMPT = "Given chat history and latest user prompt, check if the user prompt references anything in chat history. If yes, forumlate a standalone question which can be understood without the chat history: combine information from chat history and reference what the user mentioned before. If no, use the same user prompt. If unsure, ask the user to repeat their question. Do not answer the user prompt."
 
